@@ -1,0 +1,199 @@
+﻿@model FormsProject.Dto.FormDetailsModel
+
+@{
+    ViewBag.Title = "Home Page";
+    string session = Session["Kullanici"].ToString();
+}
+<h3>Hoşgeldin @session...</h3>
+<div><br /></div>
+<div align="center" class="panel panel-primary"  style="background-color: floralwhite;">
+    <h3 class="h3">Form Kayıtları</h3>
+</div>
+<div>
+    <button id="btnKayitEkle" class="btn btn-primary">Kayıt Ekle</button>
+    <div style="float:right;">
+        <button id="btnAra" class="btn btn-primary" style="margin-right:5px;">Ara</button>
+        <div style="float:right;">
+            @Html.TextBoxFor(m => m.Ara, new { @class = "form-control", @id = "arama" })
+        </div>
+    </div>
+</div>
+<div><br /></div>
+<div id="Kayitlar">
+    @Html.Action("_FormDetailList", "Home")
+</div>
+
+<div class="modal" id="ekleduzenleModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h4 class="modal-title" id="modalBaslik">Kayıt Ekle</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            @using (Ajax.BeginForm("FormInsertUpdate", "Home", new AjaxOptions { HttpMethod = "POST", OnSuccess = "kayitYapildi" }, new { id = "frmKayit" }))
+            {
+                <div class="modal-body">
+                    @Html.HiddenFor(m => m.FormID, new { @id = "formId" })
+                    @Html.LabelFor(m => m.Name)
+                    @Html.TextBoxFor(m => m.Name, new { @class = "form-control", @id = "name" })
+                    @Html.ValidationMessageFor(m => m.Name, null, new { @class = "text-danger" })
+                    <br />
+                    @Html.LabelFor(m => m.Description)
+                    @Html.TextBoxFor(m => m.Description, new { @class = "form-control", @id = "descript" })
+                    @Html.ValidationMessageFor(m => m.Description, null, new { @class = "text-danger" })
+                    <br />
+                    <hr />
+                    <div id="sonuc"></div>
+                </div>
+                <div class="modal-footer">
+                    <input type="submit" class="btn btn-success" value="Kaydet">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">Kapat</button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="silModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h4 class="modal-title">Kayıt Sil</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <h5>Kayıt Silinecektir Onaylıyor musunuz? </h5>
+                <input type="hidden" id="silId" />
+                <div id="sonucSil"></div>
+            </div>
+            <div class="modal-footer">
+                <input type="button" id="btnSil" class="btn btn-danger" value="Sil">
+                <button type="button" class="btn btn-primary" data-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script type="text/javascript">
+        $("#btnKayitEkle").click(function () {
+            $("#modalBaslik").html("Kayıt Ekle");
+            $("#ekleduzenleModal").modal();
+            $("#sonuc").removeClass();
+            $("#sonuc").html("");
+        });
+        $(document).on("click", ".duzenle", function () {
+            var id = $(this).attr("data-id");
+            $("#ekleduzenleModal").modal();
+            $("#modalBaslik").html("Kayıt Güncelle");
+            $("#sonuc").removeClass();
+            $("#sonuc").html("");
+            $.ajax({
+                type: "GET",
+                url: "/Home/FormsList",
+                data: { "id": id },
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (data) {
+                    console.log(data);
+                    var id = data.FormID;
+                    $("#name").val(data.Name);
+                    $("#formId").val(data.FormID);
+                    $("#descript").val(data.Description);
+                }
+            });
+        });
+
+        $(document).on("click", ".sil", function () {
+            var id = $(this).attr("data-id");
+            $("#silId").val(id);
+            $("#silModal").modal();
+            $("#sonucSil").removeClass();
+            $("#sonucSil").html("");
+        });
+        $("#btnSil").click(function () {
+            var id = $("#silId").val();
+            $.ajax({
+                type: "POST",
+                url: "/Home/FormDelete",
+                data: { "id": id },
+                dataType: "json",
+                success: function (data) {
+                    if (data.islem) {
+                        $("#sonucSil").addClass("alert alert-success");
+                        kayitGetir();
+                    } else {
+                        $("#sonucSil").addClass("alert alert-danger");
+                    }
+                    $("#sonucSil").html(data.mesaj);
+                }
+            });
+        });
+
+        $("#btnAra").click(function () {
+            var text = $("#arama").val();
+            $.ajax({
+                type: "POST",
+                url: "/Home/FormSearch",
+                data: { "Searched": text },
+                dataType: "json",
+                success: function (data) {
+                    $("#myTable tbody tr").remove();
+                    for (var i = 0; i < data.length; i++) {
+                        var dateString = data[i].createdAt.substr(6);
+                        var currentTime = new Date(parseInt(dateString));
+                        var month = currentTime.getMonth() + 1;
+                        var day = currentTime.getDate();
+                        var year = currentTime.getFullYear();
+                        var date = day + "." + month + "." + year;
+                        var createdBy = data[i].createdBy;
+                        if (createdBy == null) {
+                            createdBy = "";
+                        } else {
+                            createdBy = data[i].createdBy;
+                        }
+                        $("#myTable tbody").append("<tr> <td>" + data[i].formId +
+                            "</td><td>" + data[i].name +
+                            "</td><td>" + data[i].description +
+                            "</td><td>" + date +
+                            "</td><td>" + createdBy +
+                            "</td> <td><button class='btn btn-warning duzenle' data-id='" +
+                            data[i].formId + "'>Düzenle</button></td><td><button class='btn btn-danger sil' data-id='" +
+                            data[i].formId + "'>Sil</button></td></tr>");
+                    }
+                    console.log(data);
+                }
+            });
+        });
+
+        function kayitYapildi(result) {
+            if (result.islem == true) {
+                $("form")[0].reset();
+                $("#sonuc").removeClass();
+                $("#sonuc").addClass("alert alert-success");
+                kayitGetir();
+            }
+            else {
+                $("#sonuc").removeClass();
+                $("#sonuc").addClass("alert alert-danger");
+            }
+            $("#sonuc").html(result.mesaj);
+        }
+        function kayitGetir() {
+            $.ajax({
+                type: "GET",
+                url: "/Home/_FormDetailList",
+                dataType: "html",
+                success: function (data) {
+                    console.log("İşlem Başarılı");
+                    $("#Kayitlar").html(data);
+                }
+            });
+        }
+    </script>
+}
+

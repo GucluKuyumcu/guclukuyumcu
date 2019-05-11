@@ -1,0 +1,33 @@
+﻿@model IEnumerable<FormsProject.Models.FormDetails>
+
+<table class="table" id="myTable">
+    <thead>
+    <th><b>Id</b></th>
+    <th><b>Adı</b></th>
+    <th><b>Açıklama</b></th>
+    <th><b>Oluşturulma Tarihi</b></th>
+    <th><b>Oluşturan Kullanıcı</b></th>
+    <th><b>Düzenle</b></th>
+    <th><b>Sil</b></th>
+    </thead>
+    <tbody>
+        @foreach (var kayit in Model)
+        {
+            <tr>
+                <td>@kayit.formId</td>
+                <td>@kayit.name</td>
+                <td>@kayit.description</td>
+                @{
+                    var date = kayit.createdAt;
+                    string datestring = date.ToString("dd.MM.yyyy");
+                    <td>@datestring</td>
+                }
+                <td>@kayit.createdBy</td>
+                <td><button class="btn btn-warning duzenle" data-id="@kayit.formId">Düzenle</button></td>
+                <td><button class="btn btn-danger sil" data-id="@kayit.formId">Sil</button></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+
